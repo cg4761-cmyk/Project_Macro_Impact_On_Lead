@@ -47,9 +47,14 @@ def create_features(df: pd.DataFrame, price_col: str = None) -> pd.DataFrame:
     - MA7: 7-period moving average
     - MA30: 30-period moving average
     - Rolling volatility: rolling standard deviation of returns
+    - EMA5, EMA15, EMA30: Exponential moving averages (5, 15, 30 periods)
+    - MACD5, MACD15, MACD30: Moving Average Convergence Divergence indicators
+    - RSI: Relative Strength Index (14-period)
+    - BB_upper, BB_middle, BB_lower: Bollinger Bands (20-period, 2 std dev)
     
-    Target:
+    Targets:
     - return_7d: (p7 - p1) / p1 (7-day forward return)
+    - target: Binary classification (1 if return_7d > 0, else 0)
     
     Parameters:
     -----------
@@ -112,6 +117,46 @@ def create_features(df: pd.DataFrame, price_col: str = None) -> pd.DataFrame:
     # Common windows: 7, 30 days. Using 30 days for volatility
     df['rolling_volatility'] = df['returns'].rolling(window=30, min_periods=1).std()
     
+    # Feature 4-6: EMA5, EMA15, EMA30 - Exponential Moving Averages
+    df['EMA5'] = df[price_col].ewm(span=5, adjust=False, min_periods=1).mean()
+    df['EMA15'] = df[price_col].ewm(span=15, adjust=False, min_periods=1).mean()
+    df['EMA30'] = df[price_col].ewm(span=30, adjust=False, min_periods=1).mean()
+    
+    # Feature 7-9: MACD5, MACD15, MACD30 - Moving Average Convergence Divergence
+    # MACD = Fast EMA - Slow EMA, Signal = EMA of MACD
+    # MACD5: fast=5, slow=26, signal=9
+    ema5_fast = df[price_col].ewm(span=5, adjust=False, min_periods=1).mean()
+    ema26_slow = df[price_col].ewm(span=26, adjust=False, min_periods=1).mean()
+    df['MACD5'] = ema5_fast - ema26_slow
+    
+    # MACD15: fast=15, slow=26, signal=9
+    ema15_fast = df[price_col].ewm(span=15, adjust=False, min_periods=1).mean()
+    df['MACD15'] = ema15_fast - ema26_slow
+    
+    # MACD30: fast=30, slow=26, signal=9
+    ema30_fast = df[price_col].ewm(span=30, adjust=False, min_periods=1).mean()
+    df['MACD30'] = ema30_fast - ema26_slow
+    
+    # Feature 10: RSI - Relative Strength Index (typically 14 periods)
+    def calculate_rsi(prices, period=14):
+        delta = prices.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=period, min_periods=1).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=period, min_periods=1).mean()
+        rs = gain / loss
+        rsi = 100 - (100 / (1 + rs))
+        return rsi
+    
+    df['RSI'] = calculate_rsi(df[price_col], period=14)
+    
+    # Feature 11-13: Bollinger Bands (typically 20 periods, 2 std dev)
+    bb_period = 20
+    bb_std = 2
+    bb_middle = df[price_col].rolling(window=bb_period, min_periods=1).mean()
+    bb_std_dev = df[price_col].rolling(window=bb_period, min_periods=1).std()
+    df['BB_upper'] = bb_middle + (bb_std_dev * bb_std)
+    df['BB_middle'] = bb_middle
+    df['BB_lower'] = bb_middle - (bb_std_dev * bb_std)
+    
     # Target: return after 7 days - (p7 - p1) / p1
     # Calculate return from current date to 7 days later
     if date_col is not None:
@@ -134,6 +179,9 @@ def create_features(df: pd.DataFrame, price_col: str = None) -> pd.DataFrame:
     
     # Shift return_7d down by 7 rows to align with actual dates
     df['return_7d'] = df['return_7d'].shift(7)
+    
+    # Binary target: 1 if return_7d > 0, else 0
+    df['target'] = (df['return_7d'] > 0).astype(int)
     
     return df
 
@@ -430,6 +478,20 @@ def process_lopbdy_features(data_path: str = None, price_col: str = None,
     # Create features
     df_features = create_features(df, price_col)
     
+    # Delete column 3 "Unnamed" if it exists
+    # Check column 3 (0-indexed, so index 3 is the 4th column)
+    if len(df_features.columns) > 3:
+        col_name = df_features.columns[3]
+        if 'Unnamed' in str(col_name) or str(col_name).startswith('Unnamed'):
+            df_features = df_features.drop(columns=[col_name])
+            print(f"Dropped column 3: {col_name}")
+    
+    # Also check for any other "Unnamed" columns
+    unnamed_cols = [col for col in df_features.columns if 'Unnamed' in str(col)]
+    if unnamed_cols:
+        df_features = df_features.drop(columns=unnamed_cols)
+        print(f"Dropped additional Unnamed columns: {unnamed_cols}")
+    
     # Save if path provided
     if save_path:
         df_features.to_csv(save_path, index=False)
@@ -480,6 +542,20 @@ def process_and_merge_all_features(lopbdy_path: str = None, lmpbds03_path: str =
         merged_features = merged_features.iloc[29:].reset_index(drop=True)
         print(f"Dropped first 29 rows. Remaining rows: {len(merged_features)}")
     
+    # Delete column 3 "Unnamed" if it exists
+    # Check column 3 (0-indexed, so index 3 is the 4th column)
+    if len(merged_features.columns) > 3:
+        col_name = merged_features.columns[3]
+        if 'Unnamed' in str(col_name) or str(col_name).startswith('Unnamed'):
+            merged_features = merged_features.drop(columns=[col_name])
+            print(f"Dropped column 3: {col_name}")
+    
+    # Also check for any other "Unnamed" columns
+    unnamed_cols = [col for col in merged_features.columns if 'Unnamed' in str(col)]
+    if unnamed_cols:
+        merged_features = merged_features.drop(columns=unnamed_cols)
+        print(f"Dropped additional Unnamed columns: {unnamed_cols}")
+    
     # Save if path provided
     if save_path:
         merged_features.to_csv(save_path, index=False)
@@ -489,31 +565,63 @@ def process_and_merge_all_features(lopbdy_path: str = None, lmpbds03_path: str =
 
 
 if __name__ == "__main__":
-    # Example usage - process and merge all features
-    df = process_and_merge_all_features(
+    # Process and save LOPBDY features
+    print("="*60)
+    print("PROCESSING LOPBDY FEATURES")
+    print("="*60)
+    df_lopbdy = process_lopbdy_features(
+        save_path="data_processed/lopbdy_features.csv"
+    )
+    
+    print("\n" + "="*60)
+    print("LOPBDY FEATURES SUMMARY")
+    print("="*60)
+    print(f"\nTotal rows: {len(df_lopbdy)}")
+    print(f"\nColumns ({len(df_lopbdy.columns)} total): {df_lopbdy.columns.tolist()}")
+    
+    # Show LOPBDY features
+    lopbdy_cols = ['MA7', 'MA30', 'rolling_volatility', 'EMA5', 'EMA15', 'EMA30',
+                   'MACD5', 'MACD15', 'MACD30', 'RSI', 'BB_upper', 'BB_middle',
+                   'BB_lower', 'return_7d', 'target']
+    existing_lopbdy_cols = [col for col in lopbdy_cols if col in df_lopbdy.columns]
+    if existing_lopbdy_cols:
+        print("\nLOPBDY Feature Statistics:")
+        print(df_lopbdy[existing_lopbdy_cols].describe())
+    
+    # Show target distribution
+    if 'target' in df_lopbdy.columns:
+        print("\nTarget Distribution:")
+        print(df_lopbdy['target'].value_counts())
+        print(f"\nTarget percentage: {df_lopbdy['target'].mean()*100:.2f}% positive (1)")
+    
+    print("\n" + "="*60)
+    print("PROCESSING AND MERGING ALL FEATURES")
+    print("="*60)
+    # Process and merge all features
+    df_all = process_and_merge_all_features(
         save_path="data_processed/all_features.csv"
     )
     
     print("\n" + "="*60)
     print("MERGED FEATURES SUMMARY")
     print("="*60)
-    print(f"\nTotal rows: {len(df)}")
-    print(f"\nColumns: {df.columns.tolist()}")
+    print(f"\nTotal rows: {len(df_all)}")
+    print(f"\nColumns: {df_all.columns.tolist()}")
     
-    # Show LOPBDY features
-    lopbdy_cols = ['MA7', 'MA30', 'rolling_volatility', 'return_7d']
-    if all(col in df.columns for col in lopbdy_cols):
-        print("\nLOPBDY Features:")
-        print(df[lopbdy_cols].describe())
+    # Show LOPBDY features in merged
+    lopbdy_cols_merged = [col for col in existing_lopbdy_cols if col in df_all.columns]
+    if lopbdy_cols_merged:
+        print("\nLOPBDY Features in merged dataset:")
+        print(df_all[lopbdy_cols_merged].describe())
     
     # Show LMPBDS03 features
     future_cols = ['spread', 'future_return', 'future_MA7', 'future_MA30', 
                    'future_rolling_volatility', 'future_return_7d']
-    future_cols = [col for col in future_cols if col in df.columns]
+    future_cols = [col for col in future_cols if col in df_all.columns]
     if future_cols:
         print("\nLMPBDS03 Features:")
-        print(df[future_cols].describe())
+        print(df_all[future_cols].describe())
     
-    print("\nFirst 10 rows:")
-    print(df.head(10))
+    print("\nFirst 10 rows of merged features:")
+    print(df_all.head(10))
 
