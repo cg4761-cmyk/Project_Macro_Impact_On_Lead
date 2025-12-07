@@ -165,7 +165,7 @@ def create_features(df: pd.DataFrame, price_col: str = None) -> pd.DataFrame:
         # For each date, get the price 7 days later
         price_7d_later = []
         for date in df[date_col]:
-            date_7d_later = date + pd.Timedelta(days=7)
+            date_7d_later = date + pd.Timedelta(days=6)
             if date_7d_later in df_indexed.index:
                 price_7d_later.append(df_indexed.loc[date_7d_later, price_col])
             else:
@@ -177,11 +177,12 @@ def create_features(df: pd.DataFrame, price_col: str = None) -> pd.DataFrame:
         df['return_7d'] = (df['price_7d_forward'] - df[price_col]) / df[price_col]
         df = df.drop(['price_7d_forward'], axis=1)
     
-    # Shift return_7d down by 7 rows to align with actual dates
-    df['return_7d'] = df['return_7d'].shift(7)
-    
     # Binary target: 1 if return_7d > 0, else 0
     df['target'] = (df['return_7d'] > 0).astype(int)
+    
+    # Delete last 10 rows
+    if len(df) > 10:
+        df = df.iloc[:-10].reset_index(drop=True)
     
     return df
 
@@ -357,6 +358,10 @@ def create_future_features(df_future: pd.DataFrame, df_spot: pd.DataFrame = None
         output_cols.extend(['spread', 'spot_price'])
     output_cols.extend(['future_return', 'future_MA7', 'future_MA30', 
                        'future_rolling_volatility', 'future_return_7d'])
+
+    # Delete last 10 rows
+    if len(df) > 10:
+        df = df.iloc[:-10].reset_index(drop=True)
     
     return df[output_cols]
 
