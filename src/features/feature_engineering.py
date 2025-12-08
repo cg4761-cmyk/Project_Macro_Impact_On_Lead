@@ -365,6 +365,9 @@ def create_future_features(df_future: pd.DataFrame, df_spot: pd.DataFrame = None
     # Delete last 10 rows
     if len(df) > 10:
         df = df.iloc[:-10].reset_index(drop=True)
+
+    if len(df) > 30:
+        df = df.iloc[29:].reset_index(drop=True)
     
     return df[output_cols]
 
@@ -544,7 +547,6 @@ def process_and_merge_all_features(lopbdy_path: str = None, lmpbds03_path: str =
     # Merge features by date
     print("Merging features...")
     merged_features = merge_features(lopbdy_features, lmpbds03_features)
-    
     
     # Delete column 3 "Unnamed" if it exists
     # Check column 3 (0-indexed, so index 3 is the 4th column)
