@@ -34,6 +34,10 @@ def load_lopbdy_data(data_path: str = None) -> pd.DataFrame:
     if len(df) > 6:
         df = df.iloc[6:].reset_index(drop=True)
     
+    # Flip dataset to make dates from past to recent (ascending order)
+    # Original data is from recent to past, so reverse it
+    df = df.iloc[::-1].reset_index(drop=True)
+    
     # Assume first column is date and second is price, adjust as needed
     # Common column names: Date, Price, Close, etc.
     return df
@@ -215,6 +219,10 @@ def load_lmpbds03_data(data_path: str = None) -> pd.DataFrame:
     # Delete first 6 rows (similar to LOPBDY)
     if len(df) > 6:
         df = df.iloc[6:].reset_index(drop=True)
+    
+    # Flip dataset to make dates from past to recent (ascending order)
+    # Original data is from recent to past, so reverse it
+    df = df.iloc[::-1].reset_index(drop=True)
     
     return df
 
