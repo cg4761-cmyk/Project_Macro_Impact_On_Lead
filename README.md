@@ -2,7 +2,7 @@
 
 This project aims to predict 7-day returns of London Metal Exchange (LME) lead prices and analyze the impact of macroeconomic factors on lead price movements. The project includes a complete machine learning workflow from data preprocessing and feature engineering to model training and evaluation.
 
-## 📋 Project Overview
+## Project Overview
 
 This project employs various machine learning models (linear models, tree-based models, deep learning models, and time series models) to predict 7-day returns of lead prices, performing both regression and classification tasks. The project also incorporates macroeconomic factor analysis, including copper prices, US Dollar Index, US 10-year Treasury yield, and WTI crude oil prices.
 
@@ -11,7 +11,7 @@ This project employs various machine learning models (linear models, tree-based 
 1. **Regression Task**: Predict continuous 7-day forward returns (return_7d) of lead prices
 2. **Classification Task**: Predict the direction of 7-day returns (positive/negative)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Project_Macro_Impact_On_Lead/
@@ -67,7 +67,7 @@ Project_Macro_Impact_On_Lead/
 └── README.md                    # Project documentation
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Requirements
 
@@ -103,7 +103,7 @@ pip install -r requirements.txt
 python src/features/feature_engineering.py
 ```
 
-## 📊 Data Description
+## Data Description
 
 ### Data Sources
 
@@ -136,7 +136,7 @@ python src/features/feature_engineering.py
 - `return_7d`: 7-day forward return (regression target)
 - `target`: Binary classification label (1 if return_7d > 0, else 0)
 
-## 🤖 Models
+## Models
 
 ### Regression Models
 
@@ -186,7 +186,7 @@ python src/features/feature_engineering.py
 - F1-Score
 - AUC-ROC
 
-## 📝 Usage
+## Usage
 
 ### 1. Data Preprocessing
 
@@ -226,14 +226,14 @@ Current baseline model uses 5 low-correlation features:
 - returns
 - rolling_volatility
 
-## 🔍 Key Findings
+## Key Findings
 
 1. **Data Quality**: Using pure price features (`lopbdy_features.csv`) avoids data leakage issues
 2. **Feature Selection**: Optimal feature sets selected through PCA, correlation analysis, and VIF analysis
 3. **Model Performance**: Different model types show significant performance differences across tasks
 4. **Time Series Characteristics**: Walk-forward validation ensures proper time series data splitting
 
-## 📈 Results
+## Results
 
 Model results are saved in their respective notebooks, including:
 - Performance metrics comparison across all models
@@ -241,7 +241,7 @@ Model results are saved in their respective notebooks, including:
 - Training time comparison
 - Best model identification
 
-## ⚠️ Important Notes
+## Important Notes
 
 1. **Data Leakage Prevention**:
    - Uses walk-forward time series splitting
@@ -257,7 +257,7 @@ Model results are saved in their respective notebooks, including:
    - Standardization applied (for linear models and neural networks)
    - Tree models do not require feature scaling
 
-## 📚 File Descriptions
+## File Descriptions
 
 ### Core Files
 
@@ -272,7 +272,7 @@ Model results are saved in their respective notebooks, including:
 - `data_processed/all_features.csv`: Complete feature set including macroeconomic factors
 - `data_raw/all_raw_data.csv`: Aligned raw data with macroeconomic factors
 
-## 🔧 Development
+## Development
 
 ### Adding New Models
 
@@ -287,14 +287,10 @@ Modify the `feature_cols` variable in the notebook:
 feature_cols = ['MACD30', 'MACD15', 'RSI', 'returns', 'rolling_volatility']
 ```
 
-## 📄 License
+## Authors
 
-[Add license information]
+Chengyu Gong, Derek Lu, Yuyue(Carolina) Zhu
 
-## 👥 Authors
+## Acknowledgments
 
-[Add author information]
-
-## 🙏 Acknowledgments
-
-[Add acknowledgments]
+We would like to express our sincere gratitude to the instructors and teaching staff of the course Macro Impact on Lead Price Prediction for their guidance and insightful feedback throughout this project. We are also grateful to our peers for their valuable discussions and collaborative spirit, which greatly contributed to refining our methodology and interpretation. Additionally, we acknowledge the open-source community for providing tools and frameworks that made data processing, modeling, and visualization possible. Any remaining errors are our own.
