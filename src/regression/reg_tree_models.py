@@ -59,9 +59,10 @@ def train_random_forest(
     test_X: np.ndarray,
     test_y: np.ndarray,
     n_estimators: int = 100,
-    max_depth: Optional[int] = None,
-    min_samples_split: int = 2,
-    min_samples_leaf: int = 1,
+    max_depth: Optional[int] = 8,
+    min_samples_split: int = 20,
+    min_samples_leaf: int = 10,
+    max_features: str = 'sqrt',
     random_state: int = 42,
     n_jobs: int = -1,
 ) -> Dict[str, Union[str, float, np.ndarray]]:
@@ -80,12 +81,14 @@ def train_random_forest(
         Test target vector of shape (n_samples_test,).
     n_estimators : int, default=100
         Number of trees in the forest.
-    max_depth : int, default=None
-        Maximum depth of the tree. If None, nodes are expanded until all leaves are pure.
-    min_samples_split : int, default=2
-        Minimum number of samples required to split an internal node.
-    min_samples_leaf : int, default=1
-        Minimum number of samples required to be at a leaf node.
+    max_depth : int, default=8
+        Maximum depth of the tree. Limited to 8 to prevent overfitting.
+    min_samples_split : int, default=20
+        Minimum number of samples required to split an internal node. Increased to prevent overfitting.
+    min_samples_leaf : int, default=10
+        Minimum number of samples required to be at a leaf node. Increased to prevent overfitting.
+    max_features : str, default='sqrt'
+        Number of features to consider when looking for the best split. 'sqrt' uses sqrt(n_features).
     random_state : int, default=42
         Random state for reproducibility.
     n_jobs : int, default=-1
@@ -130,12 +133,13 @@ def train_random_forest(
     train_y = train_y.flatten()
     test_y = test_y.flatten()
 
-    # Train Random Forest model
+    # Train Random Forest model with regularization to prevent overfitting
     model = RandomForestRegressor(
         n_estimators=n_estimators,
         max_depth=max_depth,
         min_samples_split=min_samples_split,
         min_samples_leaf=min_samples_leaf,
+        max_features=max_features,
         random_state=random_state,
         n_jobs=n_jobs,
     )
@@ -161,10 +165,12 @@ def train_xgboost(
     test_X: np.ndarray,
     test_y: np.ndarray,
     n_estimators: int = 100,
-    max_depth: int = 6,
-    learning_rate: float = 0.1,
-    subsample: float = 1.0,
-    colsample_bytree: float = 1.0,
+    max_depth: int = 3,
+    learning_rate: float = 0.03,
+    subsample: float = 0.7,
+    colsample_bytree: float = 0.7,
+    reg_alpha: float = 0.5,
+    reg_lambda: float = 2.0,
     random_state: int = 42,
 ) -> Dict[str, Union[str, float, np.ndarray]]:
     """
@@ -182,14 +188,18 @@ def train_xgboost(
         Test target vector of shape (n_samples_test,).
     n_estimators : int, default=100
         Number of boosting rounds.
-    max_depth : int, default=6
-        Maximum tree depth for base learners.
-    learning_rate : float, default=0.1
-        Boosting learning rate.
-    subsample : float, default=1.0
-        Subsample ratio of the training instance.
-    colsample_bytree : float, default=1.0
-        Subsample ratio of columns when constructing each tree.
+    max_depth : int, default=3
+        Maximum tree depth for base learners. Reduced to 3 to prevent overfitting.
+    learning_rate : float, default=0.03
+        Boosting learning rate. Reduced to 0.03 for better generalization.
+    subsample : float, default=0.7
+        Subsample ratio of the training instance. Using 70% of samples to prevent overfitting.
+    colsample_bytree : float, default=0.7
+        Subsample ratio of columns when constructing each tree. Using 70% of features.
+    reg_alpha : float, default=0.5
+        L1 regularization term on weights. Increased to 0.5 to help prevent overfitting.
+    reg_lambda : float, default=2.0
+        L2 regularization term on weights. Increased to 2.0 to help prevent overfitting.
     random_state : int, default=42
         Random state for reproducibility.
 
@@ -241,13 +251,15 @@ def train_xgboost(
     train_y = train_y.flatten()
     test_y = test_y.flatten()
 
-    # Train XGBoost model
+    # Train XGBoost model with regularization to prevent overfitting
     model = xgb.XGBRegressor(
         n_estimators=n_estimators,
         max_depth=max_depth,
         learning_rate=learning_rate,
         subsample=subsample,
         colsample_bytree=colsample_bytree,
+        reg_alpha=reg_alpha,
+        reg_lambda=reg_lambda,
         random_state=random_state,
         n_jobs=-1,
     )
