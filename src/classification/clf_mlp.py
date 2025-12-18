@@ -175,6 +175,9 @@ def train_mlp(
     train_y = train_y.flatten()
     test_y = test_y.flatten()
 
+    # Set numpy random seed for additional reproducibility
+    np.random.seed(random_state)
+
     # Standardize features if requested (important for neural networks)
     scaler = None
     if standardize:

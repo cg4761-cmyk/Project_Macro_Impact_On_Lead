@@ -159,6 +159,9 @@ def train_random_forest(
     train_y = train_y.flatten()
     test_y = test_y.flatten()
 
+    # Set numpy random seed for additional reproducibility
+    np.random.seed(random_state)
+
     # Train Random Forest model
     model = RandomForestClassifier(
         n_estimators=n_estimators,

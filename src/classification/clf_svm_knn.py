@@ -158,6 +158,9 @@ def train_svm(
     train_y = train_y.flatten()
     test_y = test_y.flatten()
 
+    # Set numpy random seed for additional reproducibility
+    np.random.seed(random_state)
+
     # Standardize features if requested (important for SVM)
     scaler = None
     if standardize:
@@ -270,6 +273,9 @@ def train_knn(
     train_y = train_y.flatten()
     test_y = test_y.flatten()
 
+    # Set numpy random seed for reproducibility (KNN is deterministic but numpy operations might vary)
+    np.random.seed(42)
+
     # Standardize features if requested (important for KNN)
     scaler = None
     if standardize:
@@ -277,17 +283,50 @@ def train_knn(
         train_X = scaler.fit_transform(train_X)
         test_X = scaler.transform(test_X)
 
+    # Workaround for Windows threadpoolctl issue
+    # The AttributeError: 'NoneType' object has no attribute 'split' occurs
+    # when threadpoolctl tries to detect thread libraries on Windows during sklearn operations
+    # Solution: Use 'brute' algorithm on Windows which avoids threadpool detection
+    import platform
+    knn_algorithm = algorithm
+    if platform.system() == 'Windows':
+        # On Windows, default to 'brute' to avoid threadpoolctl issues
+        # 'brute' doesn't use advanced optimizations that trigger threadpool detection
+        if algorithm == 'auto':
+            knn_algorithm = 'brute'
+        elif algorithm not in ['brute', 'ball_tree', 'kd_tree']:
+            knn_algorithm = 'brute'  # Fallback to brute for unknown algorithms
+    
     # Train KNN model
     model = KNeighborsClassifier(
         n_neighbors=n_neighbors,
         weights=weights,
-        algorithm=algorithm,
+        algorithm=knn_algorithm,
     )
-    model.fit(train_X, train_y)
-
-    # Make predictions
-    y_pred = model.predict(test_X)
-    y_proba = model.predict_proba(test_X)
+    
+    try:
+        model.fit(train_X, train_y)
+        # Make predictions
+        y_pred = model.predict(test_X)
+        y_proba = model.predict_proba(test_X)
+    except (AttributeError, TypeError) as e:
+        error_str = str(e)
+        # Check if it's the threadpoolctl issue
+        if "'NoneType' object has no attribute 'split'" in error_str or "split" in error_str.lower():
+            # Retry with brute algorithm which doesn't use threadpool detection
+            import warnings
+            warnings.warn(f"KNN encountered threadpoolctl issue ({type(e).__name__}). Retrying with 'brute' algorithm.")
+            model = KNeighborsClassifier(
+                n_neighbors=n_neighbors,
+                weights=weights,
+                algorithm='brute',  # Brute force avoids threadpool issues
+            )
+            model.fit(train_X, train_y)
+            y_pred = model.predict(test_X)
+            y_proba = model.predict_proba(test_X)
+        else:
+            # Re-raise if it's a different error
+            raise
 
     # Evaluate
     metrics = evaluate_classification(test_y, y_pred, y_proba)

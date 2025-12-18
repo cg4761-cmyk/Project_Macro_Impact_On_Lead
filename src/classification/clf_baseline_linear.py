@@ -180,6 +180,8 @@ def train_logistic_regression(
     if optimize_threshold:
         # Use validation set from training data to find optimal threshold
         from sklearn.model_selection import train_test_split
+        # Set numpy random seed for additional reproducibility
+        np.random.seed(42)
         try:
             X_train_sub, X_val_sub, y_train_sub, y_val_sub = train_test_split(
                 train_X, train_y, test_size=0.2, random_state=42, stratify=train_y
@@ -382,6 +384,8 @@ def train_ridge_classification(
         test_X = scaler.transform(test_X)
 
     # Train Ridge classification with cross-validation
+    # Set numpy random seed for reproducibility
+    np.random.seed(42)
     model = RidgeClassifierCV(
         alphas=alphas,
         cv=5,
